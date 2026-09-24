@@ -1,61 +1,47 @@
 # Redirect Manager
 
-A local, dependency-free Python toolkit for validating, testing, and exporting HTTP redirect rules. It helps teams catch duplicate sources, redirect loops, invalid status codes, and unsafe targets before deployment.
+A local, dependency-free Python toolkit for validating, testing, and exporting path-based HTTP redirect rules. It catches duplicate sources, loops, invalid status codes, and malformed paths before deployment.
 
-> **Status:** functional CLI + Python API with automated tests. No network access is required.
+> Functional CLI + Python API with automated tests. No network access is required.
 
 ## English
 
-### Why this project exists
-Redirect files often grow into fragile collections of rules. A duplicate source, accidental loop, or malformed destination can break navigation or SEO. Redirect Manager provides one small, auditable tool for maintaining redirect rules and compiling them into common server formats.
+### Overview & purpose
+Redirect files often become fragile collections of rules. A duplicate source, accidental loop, or malformed path can break navigation and SEO. Redirect Manager provides one small, auditable tool for maintaining exact path redirects and compiling them into common server formats.
 
 ### Key features
-- Load redirect rules from CSV or JSON.
-- Validate paths/URLs and HTTP redirect codes (`301`, `302`, `307`, `308`).
-- Detect duplicate/conflicting sources and redirect cycles.
-- Resolve a source through a redirect chain with a configurable hop limit.
-- Export validated rules to Nginx, Apache `.htaccess`, or Netlify `_redirects` syntax.
-- Human-readable and JSON validation reports.
-- Local-only operation: no telemetry, API keys, or network requests.
-- Cross-platform Python 3.10+ CLI and reusable API.
+- Load rules from CSV or JSON.
+- Validate site paths and `301`, `302`, `307`, `308` status codes.
+- Detect duplicate/conflicting sources, self-redirects, and cycles.
+- Resolve redirect chains with a configurable hop limit.
+- Export to Nginx, Apache `.htaccess`, or Netlify `_redirects` syntax.
+- Human-readable or JSON validation reports.
+- Local-only: no telemetry, API keys, runtime dependencies, or network requests.
+- Python 3.10+ CLI and reusable API.
 
 ### Preview
 ```console
 $ redirect-manager validate examples/redirects.csv
 OK: 4 redirect rules validated; no errors found.
-
 $ redirect-manager resolve examples/redirects.csv /old-docs
 /old-docs -> /docs -> /documentation
-
-$ redirect-manager export examples/redirects.csv --format netlify
-/old-docs /docs 301
-/docs /documentation 301
 ```
 
 ### Requirements & installation
-Requires Python 3.10 or newer.
-
 ```bash
 python -m pip install -e .
 redirect-manager --version
 ```
-
-For development:
-```bash
-python -m pip install -e .
-python -m unittest discover -s tests -v
-```
+Requires Python 3.10 or newer.
 
 ### Input formats
-CSV must contain `source,target,status` headers. JSON must be an array of objects with the same keys. `status` defaults to `301` when omitted in JSON.
+CSV requires `source,target,status` headers. JSON is an array of objects with the same keys; JSON status defaults to `301`. Sources and targets are exact site paths beginning with one `/`.
 
 ```csv
 source,target,status
 /old,/new,301
 /docs,/documentation,308
 ```
-
-Sources may be site paths beginning with `/` or absolute `http(s)` URLs. Targets may additionally be relative site paths. Control characters are rejected. Fragment-only targets and unsupported schemes are rejected.
 
 ### Usage
 ```bash
@@ -67,13 +53,11 @@ redirect-manager export redirects.csv --format apache
 redirect-manager export redirects.csv --format netlify
 python -m redirect_manager validate redirects.csv
 ```
-
-Validation exits with code `0` when valid, `1` when rule errors are found, and `2` for input/usage failures. Export refuses invalid rule sets.
+Validation exits `0` when valid, `1` for rule errors, and `2` for input/usage failures. Export refuses invalid rule sets.
 
 ### Python API
 ```python
 from redirect_manager import load_rules, validate_rules, resolve_chain
-
 rules = load_rules("redirects.csv")
 report = validate_rules(rules)
 if report.ok:
@@ -81,33 +65,37 @@ if report.ok:
 ```
 
 ### Configuration
-No environment variables are required. CLI options control input, output format, and maximum chain length. There is intentionally no `.env` file.
+No environment variables are required. CLI options control input, output format, and chain length; therefore no `.env.example` is needed.
 
 ### Project structure
 ```text
 src/redirect_manager/   package, validation, exporters, CLI
 tests/                  unit and CLI tests
-examples/               safe sample redirect rules
-.github/workflows/       CI
+examples/               safe sample rules
+.github/workflows/       cross-platform CI
 ```
 
 ### Testing
-Run `python -m unittest discover -s tests -v`. CI also compiles the package and runs CLI smoke tests on Linux, Windows, and macOS.
+```bash
+python -m unittest discover -s tests -v
+python -m compileall -q src tests
+```
+CI runs these checks plus CLI smoke tests on Linux, Windows, and macOS.
 
 ### Security & privacy
-Redirect Manager never follows URLs or makes HTTP requests. Input is treated as untrusted text. Exporters reject invalid rules before producing configuration. Review generated server configuration before deployment; server-specific precedence and surrounding configuration still matter. See [SECURITY.md](SECURITY.md).
+Redirect Manager never follows destinations or makes HTTP requests. Input is untrusted text, and exporters refuse invalid rule sets. Review generated server snippets before deployment because surrounding server configuration and precedence still matter. See [SECURITY.md](SECURITY.md).
 
 ### Limitations
-- It validates exact redirect sources; wildcard/regex redirect semantics are intentionally unsupported.
-- It does not crawl a website or verify whether destinations exist.
-- Generated Nginx/Apache snippets are intended to be included in an appropriate existing server configuration.
-- URL normalization is deliberately conservative; semantically equivalent URLs can remain distinct.
+- Exact site paths only; wildcard/regex rules and absolute URL sources/targets are intentionally unsupported.
+- It does not crawl a site or verify destination existence.
+- Nginx/Apache output is a snippet for inclusion in an appropriate server configuration.
+- It does not model every hosting provider's rule precedence.
 
 ### Optional roadmap
-Possible future additions include wildcard-rule support behind an explicit mode, importers for additional hosting platforms, and graph visualization. These are not required for current functionality.
+Potential additions include explicit wildcard support, additional hosting exporters, and graph visualization. Current functionality does not depend on these.
 
 ### Contributing
-See [CONTRIBUTING.md](CONTRIBUTING.md). Keep changes focused, tested, dependency-light, and backward compatible where practical.
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ### License
 MIT License. See [LICENSE](LICENSE).
@@ -121,27 +109,28 @@ GitHub: [@rad03i2](https://github.com/rad03i2)
 
 ## العربية
 
-### نظرة عامة
-**Redirect Manager** أداة Python محلية وخفيفة لإدارة قواعد إعادة توجيه HTTP والتحقق منها واختبار سلاسلها وتصديرها إلى صيغ خوادم شائعة. الهدف هو اكتشاف الأخطاء قبل نشر القواعد على الموقع.
-
-### لماذا يوجد المشروع؟
-ملفات إعادة التوجيه تكبر مع الوقت وقد تحتوي مصدرًا مكررًا أو حلقة تحويل أو وجهة غير صالحة، مما يسبب مشاكل للمستخدمين ومحركات البحث. يوفر المشروع فحصًا واضحًا وقابلًا للأتمتة دون الاعتماد على خدمات خارجية.
+### نظرة عامة والهدف
+**Redirect Manager** أداة Python محلية وخفيفة للتحقق من قواعد إعادة توجيه مسارات المواقع واختبارها وتصديرها. تساعد على اكتشاف المصدر المكرر أو المتعارض، والتحويل إلى المسار نفسه، وحلقات التحويل، وأكواد الحالة غير المدعومة قبل النشر.
 
 ### الميزات
-- قراءة القواعد من CSV أو JSON.
-- التحقق من المسارات والروابط وأكواد `301` و`302` و`307` و`308`.
-- اكتشاف المصادر المكررة والمتعارضة وحلقات إعادة التوجيه.
-- تتبع سلسلة تحويل من مصدر معين مع حد أقصى للقفزات.
-- تصدير إلى Nginx وApache `.htaccess` وNetlify `_redirects`.
+- قراءة CSV وJSON.
+- التحقق من المسارات وأكواد `301` و`302` و`307` و`308`.
+- اكتشاف التكرار والتعارض والحلقات.
+- تتبع سلسلة تحويل مع حد أقصى للقفزات.
+- تصدير إلى Nginx وApache وNetlify.
 - تقارير نصية أو JSON.
-- عمل محلي بالكامل بلا اتصال شبكي أو مفاتيح API أو تتبع.
+- محلي بالكامل: بلا شبكة أو telemetry أو مفاتيح API أو اعتماديات تشغيل خارجية.
 - CLI وPython API على Python 3.10 فأحدث.
 
-### التثبيت
+### التثبيت والمتطلبات
 ```bash
 python -m pip install -e .
 redirect-manager --version
 ```
+يتطلب Python 3.10 أو أحدث.
+
+### صيغة الإدخال
+يحتاج CSV الأعمدة `source,target,status`، وJSON عبارة عن مصفوفة كائنات بالمفاتيح نفسها، مع `301` كحالة افتراضية في JSON. المصدر والهدف في الإصدار الحالي مساران دقيقان داخل الموقع ويبدآن بـ`/` واحدة.
 
 ### الاستخدام
 ```bash
@@ -151,8 +140,6 @@ redirect-manager resolve examples/redirects.csv /old-docs
 redirect-manager export examples/redirects.csv --format netlify
 ```
 
-يجب أن يحتوي CSV على الأعمدة `source,target,status`، أما JSON فهو مصفوفة كائنات بالمفاتيح نفسها. القيمة الافتراضية للحالة في JSON هي `301`.
-
 ### Python API
 ```python
 from redirect_manager import load_rules, validate_rules
@@ -160,32 +147,30 @@ rules = load_rules("redirects.csv")
 print(validate_rules(rules).ok)
 ```
 
-### الإعداد
-لا يحتاج المشروع متغيرات بيئة أو أسرارًا. جميع الخيارات تمر عبر CLI أو API.
-
-### بنية المشروع
-المصدر داخل `src/redirect_manager/`، والاختبارات داخل `tests/`، والأمثلة داخل `examples/`، وCI داخل `.github/workflows/`.
+### الإعداد وبنية المشروع
+لا توجد متغيرات بيئة أو أسرار مطلوبة. المصدر في `src/redirect_manager/`، والاختبارات في `tests/`، والأمثلة في `examples/`، وCI في `.github/workflows/`.
 
 ### الاختبارات
 ```bash
 python -m unittest discover -s tests -v
+python -m compileall -q src tests
 ```
-ويشغّل CI أيضًا فحص compilation واختبارات CLI على Linux وWindows وmacOS.
+ويشغّل CI الاختبارات وفحوص CLI على Linux وWindows وmacOS.
 
 ### الأمان والخصوصية
-الأداة لا تفتح الروابط ولا ترسل طلبات HTTP. المدخلات تعامل كنص غير موثوق، ولا يتم التصدير عند وجود أخطاء تحقق. يجب مراجعة إعداد الخادم الناتج قبل النشر لأن ترتيب قواعد الخادم وإعداداته المحيطة قد يغيران السلوك. راجع [SECURITY.md](SECURITY.md).
+الأداة لا تفتح الوجهات ولا ترسل طلبات HTTP. تعامل المدخلات كنص غير موثوق، وترفض التصدير عند فشل التحقق. راجع إعداد الخادم الناتج قبل النشر لأن الإعدادات المحيطة وترتيب القواعد قد يغيران السلوك. راجع [SECURITY.md](SECURITY.md).
 
 ### القيود
-لا يدعم الإصدار الحالي wildcard أو regex redirects، ولا يفحص وجود الصفحة الهدف عبر الإنترنت، كما أن تطبيع الروابط متحفظ عمدًا. ملفات Nginx وApache الناتجة عبارة عن snippets يجب دمجها في إعداد خادم مناسب.
+الإصدار الحالي مخصص للمسارات الدقيقة فقط؛ لا يدعم wildcard أو regex أو الروابط المطلقة، ولا يفحص وجود الصفحة الهدف عبر الإنترنت، ولا يحاكي جميع قواعد الأولوية الخاصة بكل مزود استضافة. مخرجات Nginx وApache هي snippets للدمج في إعداد خادم مناسب.
 
 ### التطوير المستقبلي الاختياري
-يمكن مستقبلًا إضافة وضع صريح لقواعد wildcard، ومستوردات لمنصات إضافية، وعرض رسومي لسلاسل التحويل.
+يمكن مستقبلًا إضافة wildcard بشكل صريح، ومصدّرات لمنصات إضافية، وعرض رسومي للسلاسل.
 
 ### المساهمة
-راجع [CONTRIBUTING.md](CONTRIBUTING.md). يفضل إبقاء التغييرات مركزة ومختبرة وقليلة الاعتماديات.
+راجع [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ### الترخيص
-المشروع مرخص بترخيص MIT. راجع [LICENSE](LICENSE).
+MIT، راجع [LICENSE](LICENSE).
 
 ### المؤلف
 **Radwan Abdulhadi Ahmed**  
