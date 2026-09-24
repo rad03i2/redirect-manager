@@ -1,0 +1,5 @@
+source,target,status
+/old-home,/home,301
+/old-docs,/docs,301
+/docs,/documentation,308
+/ar/قديم,/ar/جديد,301
